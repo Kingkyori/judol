@@ -43,7 +43,10 @@ export default function AdminPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-      if (!res.ok) throw new Error('Gagal menyimpan');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Gagal menyimpan (${res.status})`);
+      }
       setMessage('Tersimpan!');
       // Re-fetch to ensure UI reflects the latest persisted settings
       try {
@@ -54,7 +57,8 @@ export default function AdminPage() {
         }
       } catch {}
     } catch (e: any) {
-      setMessage(e.message || 'Error');
+      console.error('Save error:', e);
+      setMessage(e.message || 'Error saat menyimpan');
     } finally {
       setSaving(false);
     }

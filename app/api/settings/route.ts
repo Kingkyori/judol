@@ -1,48 +1,39 @@
 import { NextResponse } from 'next/server';
-import { getSettings, setSettings, Settings, getSettingsSource } from '../../../lib/settings';
-
-// Ensure Node.js runtime (for fs) and disable caching for dynamic values
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+import { getSettings, setSettings, Settings } from '../../../lib/settings';
 
 export async function GET() {
-  const s = await getSettings();
-  return NextResponse.json(s, {
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'X-Settings-Source': getSettingsSource()
-    }
-  });
+  try {
+    const s = await getSettings();
+    const response = NextResponse.json(s);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return response;
+  } catch (e: any) {
+    console.error('Settings GET error:', e);
+    return NextResponse.json({ error: 'Gagal membaca pengaturan' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  // Basic validation
-  const s: Settings = {
-    jackpotEnabled: Boolean(body.jackpotEnabled),
-    allowWin: Boolean(body.allowWin),
-    jackpotPercent: Number(body.jackpotPercent),
-  };
-  if (isNaN(s.jackpotPercent) || s.jackpotPercent < 0 || s.jackpotPercent > 1) {
-    return NextResponse.json({ error: 'jackpotPercent harus 0.0 - 1.0' }, { status: 400 });
-  }
   try {
+    const body = await req.json();
+    // Basic validation
+    const s: Settings = {
+      jackpotEnabled: Boolean(body.jackpotEnabled),
+      allowWin: Boolean(body.allowWin),
+      jackpotPercent: Number(body.jackpotPercent),
+    };
+    if (isNaN(s.jackpotPercent) || s.jackpotPercent < 0 || s.jackpotPercent > 1) {
+      return NextResponse.json({ error: 'jackpotPercent harus 0.0 - 1.0' }, { status: 400 });
+    }
     await setSettings(s);
-    const latest = await getSettings();
-    return NextResponse.json(latest, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Settings-Source': getSettingsSource()
-      }
-    });
+    const response = NextResponse.json(s);
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return response;
   } catch (e: any) {
-    // Should not usually throw if lib handles fallback,
-    // but return a clear error if something unexpected occurs.
-    return NextResponse.json({ error: e?.message || 'Gagal menyimpan pengaturan' }, { status: 500 });
+    console.error('Settings POST error:', e);
+    return NextResponse.json(
+      { error: e.message || 'Gagal menyimpan pengaturan' },
+      { status: 500 }
+    );
   }
 }
