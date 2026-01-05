@@ -39,6 +39,39 @@ async function getEdgeConfig() {
   return null;
 }
 
+function getEdgeConfigWriteContext(): { id: string; token: string } | null {
+  const id = process.env.EDGE_CONFIG;
+  if (!id) return null;
+  // Try common env names first
+  const candidates = [
+    'EDGE_CONFIG_TOKEN',
+    'EDGE_CONFIG_RW_TOKEN',
+    'EDGE_CONFIG_WRITE_TOKEN',
+    'EDGE_CONFIG_MANAGEMENT_TOKEN',
+  ];
+  for (const name of candidates) {
+    const val = process.env[name];
+    if (val) return { id, token: val };
+  }
+  // Fallback: scan env keys containing both 'edge' and 'token'
+  for (const key of Object.keys(process.env)) {
+    const lower = key.toLowerCase();
+    if (lower.includes('edge') && lower.includes('token')) {
+      const val = process.env[key];
+      if (val) return { id, token: val };
+    }
+  }
+  // As last resort: scan keys containing 'config' and 'token'
+  for (const key of Object.keys(process.env)) {
+    const lower = key.toLowerCase();
+    if (lower.includes('config') && lower.includes('token')) {
+      const val = process.env[key];
+      if (val) return { id, token: val };
+    }
+  }
+  return null;
+}
+
 export async function getSettings(): Promise<Settings> {
   // Prefer Edge Config if available
   try {
@@ -85,16 +118,12 @@ export async function setSettings(s: Settings): Promise<void> {
   const dir = path.dirname(filePath);
   // Try Edge Config first if available (requires management token)
   try {
-    const id = process.env.EDGE_CONFIG;
-    const token = process.env.EDGE_CONFIG_TOKEN
-      || process.env.EDGE_CONFIG_RW_TOKEN
-      || process.env.EDGE_CONFIG_WRITE_TOKEN
-      || process.env.EDGE_CONFIG_MANAGEMENT_TOKEN;
-    if (id && token) {
-      const res = await fetch(`https://api.vercel.com/v1/edge-config/${id}/items`, {
+    const ctx = getEdgeConfigWriteContext();
+    if (ctx) {
+      const res = await fetch(`https://api.vercel.com/v1/edge-config/${ctx.id}/items`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${ctx.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
