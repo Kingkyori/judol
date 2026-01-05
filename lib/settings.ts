@@ -15,7 +15,7 @@ const defaultSettings: Settings = {
 
 const filePath = path.join(process.cwd(), 'data', 'settings.json');
 let memorySettings: Settings | null = null;
-let lastSource: 'kv' | 'file' | 'memory' | 'default' = 'default';
+let lastSource: 'edge' | 'kv' | 'file' | 'memory' | 'default' = 'default';
 
 async function getKV() {
   try {
@@ -28,7 +28,30 @@ async function getKV() {
   return null;
 }
 
+
+async function getEdgeConfig() {
+  try {
+    if (process.env.EDGE_CONFIG) {
+      const mod = await import('@vercel/edge-config');
+      return mod as { get: (key: string) => Promise<any> };
+    }
+  } catch {}
+  return null;
+}
+
 export async function getSettings(): Promise<Settings> {
+  // Prefer Edge Config if available
+  try {
+    const ec = await getEdgeConfig();
+    if (ec) {
+      const v = await ec.get('judol:settings');
+      if (v) {
+        lastSource = 'edge';
+        return v as Settings;
+      }
+    }
+  } catch {}
+
   // Prefer KV if available
   try {
     const kv = await getKV();
@@ -40,6 +63,7 @@ export async function getSettings(): Promise<Settings> {
       }
     }
   } catch {}
+
 
   // Fallback to file
   try {
@@ -59,6 +83,33 @@ export async function getSettings(): Promise<Settings> {
 
 export async function setSettings(s: Settings): Promise<void> {
   const dir = path.dirname(filePath);
+  // Try Edge Config first if available (requires management token)
+  try {
+    const id = process.env.EDGE_CONFIG;
+    const token = process.env.EDGE_CONFIG_TOKEN
+      || process.env.EDGE_CONFIG_RW_TOKEN
+      || process.env.EDGE_CONFIG_WRITE_TOKEN
+      || process.env.EDGE_CONFIG_MANAGEMENT_TOKEN;
+    if (id && token) {
+      const res = await fetch(`https://api.vercel.com/v1/edge-config/${id}/items`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [
+            { operation: 'upsert', key: 'judol:settings', value: s },
+          ]
+        }),
+      });
+      if (res.ok) {
+        memorySettings = s; // keep memory in sync
+        return;
+      }
+    }
+  } catch {}
+
   // Try KV first if available
   try {
     const kv = await getKV();
@@ -68,6 +119,7 @@ export async function setSettings(s: Settings): Promise<void> {
       return;
     }
   } catch {}
+
 
   // Fallback to file write
   try {
@@ -80,6 +132,6 @@ export async function setSettings(s: Settings): Promise<void> {
   }
 }
 
-export function getSettingsSource(): 'kv' | 'file' | 'memory' | 'default' {
+export function getSettingsSource(): 'edge' | 'kv' | 'file' | 'memory' | 'default' {
   return lastSource;
 }

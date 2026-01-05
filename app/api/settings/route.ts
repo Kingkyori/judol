@@ -4,6 +4,7 @@ import { getSettings, setSettings, Settings, getSettingsSource } from '../../../
 // Ensure Node.js runtime (for fs) and disable caching for dynamic values
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   const s = await getSettings();

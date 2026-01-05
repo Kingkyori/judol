@@ -17,6 +17,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -26,6 +27,7 @@ export default function AdminPage() {
         if (res.ok) {
           const data = await res.json();
           setSettings(data);
+          setSource(res.headers.get('X-Settings-Source'));
         }
       } catch {}
       setLoading(false);
@@ -46,7 +48,10 @@ export default function AdminPage() {
       // Re-fetch to ensure UI reflects the latest persisted settings
       try {
         const r2 = await fetch('/api/settings', { cache: 'no-store' });
-        if (r2.ok) setSettings(await r2.json());
+        if (r2.ok) {
+          setSettings(await r2.json());
+          setSource(r2.headers.get('X-Settings-Source'));
+        }
       } catch {}
     } catch (e: any) {
       setMessage(e.message || 'Error');
@@ -97,6 +102,9 @@ export default function AdminPage() {
 
               <button className="btn btn-primary" type="submit" disabled={saving}>Simpan</button>
             </div>
+            {source && (
+              <p style={{ marginTop: 8, color: '#64748b' }}>Sumber pengaturan: {source}</p>
+            )}
             {message && <p style={{ marginTop: 10 }}>{message}</p>}
           </form>
         )}
