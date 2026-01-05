@@ -18,6 +18,7 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -64,6 +65,49 @@ export default function AdminPage() {
     }
   }
 
+  function exportSettings() {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `judol-settings-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setMessage('Download berhasil!');
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result as string;
+        const imported = JSON.parse(content) as Settings;
+        
+        // Validasi
+        if (typeof imported.jackpotEnabled !== 'boolean' ||
+            typeof imported.jackpotPercent !== 'number' ||
+            typeof imported.allowWin !== 'boolean') {
+          throw new Error('Format file tidak valid');
+        }
+
+        setSettings(imported);
+        setMessage('File berhasil dimuat. Klik "Simpan" untuk menyimpan.');
+      } catch (err: any) {
+        setMessage(`Error import: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+
   return (
     <div className="container">
       <div className="card">
@@ -105,6 +149,32 @@ export default function AdminPage() {
               </label>
 
               <button className="btn btn-primary" type="submit" disabled={saving}>Simpan</button>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button 
+                  type="button" 
+                  className="btn" 
+                  style={{ backgroundColor: '#666', color: 'white', cursor: 'pointer' }}
+                  onClick={exportSettings}
+                >
+                  📥 Download Backup
+                </button>
+                <button 
+                  type="button" 
+                  className="btn" 
+                  style={{ backgroundColor: '#666', color: 'white', cursor: 'pointer' }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  📤 Upload Backup
+                </button>
+              </div>
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept=".json" 
+                onChange={handleImport}
+                style={{ display: 'none' }}
+              />
             </div>
             {source && (
               <p style={{ marginTop: 8, color: '#64748b' }}>Sumber pengaturan: {source}</p>
