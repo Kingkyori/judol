@@ -22,7 +22,7 @@ export default function AdminPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch('/api/settings', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           setSettings(data);
@@ -43,6 +43,11 @@ export default function AdminPage() {
       });
       if (!res.ok) throw new Error('Gagal menyimpan');
       setMessage('Tersimpan!');
+      // Re-fetch to ensure UI reflects the latest persisted settings
+      try {
+        const r2 = await fetch('/api/settings', { cache: 'no-store' });
+        if (r2.ok) setSettings(await r2.json());
+      } catch {}
     } catch (e: any) {
       setMessage(e.message || 'Error');
     } finally {

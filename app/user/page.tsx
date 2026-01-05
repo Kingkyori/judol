@@ -29,7 +29,7 @@ export default function UserPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch('/api/settings', { cache: 'no-store' });
         if (res.ok) {
           setSettings(await res.json());
         }

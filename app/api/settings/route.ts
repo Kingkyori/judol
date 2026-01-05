@@ -7,7 +7,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const s = await getSettings();
-  return NextResponse.json(s);
+  return NextResponse.json(s, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
 }
 
 export async function POST(req: Request) {
@@ -23,7 +29,13 @@ export async function POST(req: Request) {
   }
   try {
     await setSettings(s);
-    return NextResponse.json(s);
+    return NextResponse.json(s, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (e: any) {
     // Should not usually throw if lib handles fallback,
     // but return a clear error if something unexpected occurs.
