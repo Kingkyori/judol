@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getSettings, setSettings, Settings } from '../../../lib/settings';
 
+// Ensure Node.js runtime (for fs) and disable caching for dynamic values
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const s = await getSettings();
   return NextResponse.json(s);
@@ -17,6 +21,12 @@ export async function POST(req: Request) {
   if (isNaN(s.jackpotPercent) || s.jackpotPercent < 0 || s.jackpotPercent > 1) {
     return NextResponse.json({ error: 'jackpotPercent harus 0.0 - 1.0' }, { status: 400 });
   }
-  await setSettings(s);
-  return NextResponse.json(s);
+  try {
+    await setSettings(s);
+    return NextResponse.json(s);
+  } catch (e: any) {
+    // Should not usually throw if lib handles fallback,
+    // but return a clear error if something unexpected occurs.
+    return NextResponse.json({ error: e?.message || 'Gagal menyimpan pengaturan' }, { status: 500 });
+  }
 }

@@ -14,13 +14,15 @@ const defaultSettings: Settings = {
 };
 
 const filePath = path.join(process.cwd(), 'data', 'settings.json');
+let memorySettings: Settings | null = null;
 
 export async function getSettings(): Promise<Settings> {
   try {
     const data = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(data) as Settings;
   } catch {
-    return defaultSettings;
+    // Fall back to in-memory settings if file is not readable
+    return memorySettings ?? defaultSettings;
   }
 }
 
@@ -29,5 +31,10 @@ export async function setSettings(s: Settings): Promise<void> {
   try {
     await fs.mkdir(dir, { recursive: true });
   } catch {}
-  await fs.writeFile(filePath, JSON.stringify(s, null, 2), 'utf-8');
+  try {
+    await fs.writeFile(filePath, JSON.stringify(s, null, 2), 'utf-8');
+  } catch {
+    // If filesystem is not writable on the host, store in memory
+    memorySettings = s;
+  }
 }
