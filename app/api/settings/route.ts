@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSettings, setSettings, Settings } from '../../../lib/settings';
+import { getSettings, setSettings, Settings, getSettingsSource } from '../../../lib/settings';
 
 // Ensure Node.js runtime (for fs) and disable caching for dynamic values
 export const runtime = 'nodejs';
@@ -11,7 +11,8 @@ export async function GET() {
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Pragma': 'no-cache',
-      'Expires': '0'
+      'Expires': '0',
+      'X-Settings-Source': getSettingsSource()
     }
   });
 }
@@ -29,11 +30,13 @@ export async function POST(req: Request) {
   }
   try {
     await setSettings(s);
-    return NextResponse.json(s, {
+    const latest = await getSettings();
+    return NextResponse.json(latest, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'X-Settings-Source': getSettingsSource()
       }
     });
   } catch (e: any) {
