@@ -52,7 +52,16 @@ export default function AdminPage() {
   const loadPlayers = async () => {
     setLoadingPlayers(true);
     try {
-      const res = await fetch('/api/players', { cache: 'no-store' });
+      // Add timestamp to bust cache
+      const timestamp = new Date().getTime();
+      const res = await fetch(`/api/players?t=${timestamp}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         console.log('✅ Loaded', data.length, 'players');
@@ -70,6 +79,10 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadPlayers();
+      
+      // Auto-refresh setiap 5 detik untuk deteksi user baru
+      const interval = setInterval(loadPlayers, 5000);
+      return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
 
