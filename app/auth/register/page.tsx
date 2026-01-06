@@ -66,16 +66,18 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.message || 'Registrasi gagal')
+        const errorMsg = data.message || data.error || 'Registrasi gagal'
+        console.error('❌ Register error response:', { status: response.status, data })
+        setError(errorMsg)
         return
       }
 
       // Registrasi berhasil
-      alert('Registrasi berhasil! Silakan login')
+      alert('✅ Registrasi berhasil! Silakan login')
       router.push('/auth/login')
     } catch (error) {
-      console.error('Register error:', error)
-      setError('Terjadi kesalahan server')
+      console.error('❌ Register error:', error)
+      setError(error instanceof Error ? error.message : 'Terjadi kesalahan server')
     } finally {
       setLoading(false)
     }

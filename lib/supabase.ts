@@ -8,6 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase URL or anon key')
 }
 
+// Log untuk debug (hanya di development)
+if (process.env.NODE_ENV === 'development') {
+  console.log('✅ Supabase URL loaded:', supabaseUrl)
+  console.log('✅ Anon Key loaded:', supabaseAnonKey?.substring(0, 20) + '...')
+  console.log('✅ Service Role Key loaded:', supabaseServiceRoleKey ? 'YES' : 'NO ⚠️')
+}
+
 // Client untuk frontend (pakai anon key)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
