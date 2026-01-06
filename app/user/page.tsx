@@ -42,7 +42,7 @@ export default function UserPage() {
 
   const handleLogout = () => {
     // Clear user data
-    localStorage.removeItem('user');
+    localStorage.removeItem('judol_user');
     localStorage.removeItem('userRole');
     // Redirect to home
     router.push('/');
@@ -50,10 +50,9 @@ export default function UserPage() {
 
   // Check if user is logged in
   useEffect(() => {
-    const userRole = localStorage.getItem('userRole');
-    const userData = localStorage.getItem('user');
+    const userData = localStorage.getItem('judol_user');
     
-    if (userRole === 'user' && userData) {
+    if (userData) {
       setIsUserLoggedIn(true);
     } else {
       router.push('/auth/user-login');
