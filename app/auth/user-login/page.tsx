@@ -19,13 +19,17 @@ export default function UserLoginPage() {
     setError('')
     setLoading(true)
 
+    console.log('Login attempt:', { username, hasPassword: !!password })
     const result = await login(username, password)
+    console.log('Login result:', result)
 
     if (result.success) {
       // Simpan user role
       localStorage.setItem('userRole', 'user')
+      console.log('Redirecting to /user')
       router.push('/user')
     } else {
+      console.log('Login failed:', result.message)
       setError(result.message)
     }
 
