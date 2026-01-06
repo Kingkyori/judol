@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import styles from './user-login.module.css'
 
@@ -73,6 +74,10 @@ export default function UserLoginPage() {
             {loading ? 'Loading...' : 'Login'}
           </button>
         </form>
+
+        <div className={styles.footer}>
+          <p>Belum punya akun? <Link href="/auth/register">Daftar di sini</Link></p>
+        </div>
       </div>
     </div>
   )
