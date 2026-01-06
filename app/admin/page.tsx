@@ -38,20 +38,26 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      setLoadingPlayers(true);
-      try {
-        const res = await fetch('/api/players', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setPlayers(data);
-        }
-      } catch (e) {
-        console.error('Error loading players:', e);
+  const loadPlayers = async () => {
+    setLoadingPlayers(true);
+    try {
+      const res = await fetch('/api/players', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        console.log('✅ Loaded', data.length, 'players');
+        setPlayers(data);
+      } else {
+        console.error('❌ Failed to load players:', res.status);
       }
+    } catch (e) {
+      console.error('Error loading players:', e);
+    } finally {
       setLoadingPlayers(false);
-    })();
+    }
+  };
+
+  useEffect(() => {
+    loadPlayers();
   }, []);
 
   const handleSelectPlayer = async (player: Player) => {
@@ -118,7 +124,25 @@ export default function AdminPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
         {/* PLAYERS LIST */}
         <div className="card">
-          <h2 style={{ marginTop: 0 }}>Daftar Pemain</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ marginTop: 0, marginBottom: 0 }}>Daftar Pemain</h2>
+            <button 
+              onClick={loadPlayers}
+              disabled={loadingPlayers}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loadingPlayers ? 'not-allowed' : 'pointer',
+                opacity: loadingPlayers ? 0.6 : 1,
+                fontSize: '12px',
+              }}
+            >
+              {loadingPlayers ? '⟳ Memuat...' : '🔄 Refresh'}
+            </button>
+          </div>
           {loadingPlayers ? (
             <p>Memuat daftar pemain…</p>
           ) : players.length === 0 ? (
