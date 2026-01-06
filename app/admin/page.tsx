@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 
 type Settings = {
   jackpotEnabled: boolean;
@@ -25,6 +27,8 @@ type PlayerSettings = {
 };
 
 export default function AdminPage() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const router = useRouter();
   const [settings] = useState<Settings>({
     jackpotEnabled: true,
     jackpotPercent: 0.3,
@@ -37,6 +41,13 @@ export default function AdminPage() {
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Check authentication
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/auth/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const loadPlayers = async () => {
     setLoadingPlayers(true);
@@ -57,8 +68,10 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    loadPlayers();
-  }, []);
+    if (isAuthenticated) {
+      loadPlayers();
+    }
+  }, [isAuthenticated]);
 
   const handleSelectPlayer = async (player: Player) => {
     setSelectedPlayer(player);
@@ -120,131 +133,143 @@ export default function AdminPage() {
 
   return (
     <div className="container">
-      {/* PLAYERS SECTION */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
-        {/* PLAYERS LIST */}
-        <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ marginTop: 0, marginBottom: 0 }}>Daftar Pemain</h2>
-            <button 
-              onClick={loadPlayers}
-              disabled={loadingPlayers}
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#2563eb',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: loadingPlayers ? 'not-allowed' : 'pointer',
-                opacity: loadingPlayers ? 0.6 : 1,
-                fontSize: '12px',
-              }}
-            >
-              {loadingPlayers ? '⟳ Memuat...' : '🔄 Refresh'}
-            </button>
-          </div>
-          {loadingPlayers ? (
-            <p>Memuat daftar pemain…</p>
-          ) : players.length === 0 ? (
-            <p style={{ color: '#666' }}>Belum ada pemain terdaftar</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {players.map((player) => (
-                <button
-                  key={player.id}
-                  onClick={() => handleSelectPlayer(player)}
-                  style={{
-                    padding: '12px',
-                    border: selectedPlayer?.id === player.id ? '2px solid #333' : '1px solid #ddd',
-                    backgroundColor: selectedPlayer?.id === player.id ? '#f0f0f0' : '#fff',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ fontWeight: 600, color: '#333', marginBottom: 6 }}>{player.username}</div>
-                  <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.5 }}>
-                    <div>📧 {player.email}</div>
-                    <div>💳 {player.account_number} ({player.bank_type})</div>
-                    <div>👤 {player.full_name}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Loading...</p>
         </div>
-
-        {/* PLAYER SETTINGS */}
-        <div className="card">
-          {selectedPlayer ? (
-            <>
-              <h2 style={{ marginTop: 0 }}>Setting Pemain: {selectedPlayer.username}</h2>
-              
-              {message && (
-                <div
+      ) : !isAuthenticated ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Silakan login terlebih dahulu untuk mengakses halaman admin.</p>
+        </div>
+      ) : (
+        <>
+          {/* PLAYERS SECTION */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
+            {/* PLAYERS LIST */}
+            <div className="card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ marginTop: 0, marginBottom: 0 }}>Daftar Pemain</h2>
+                <button 
+                  onClick={loadPlayers}
+                  disabled={loadingPlayers}
                   style={{
-                    padding: '12px',
-                    borderRadius: '6px',
-                    marginBottom: '16px',
-                    fontSize: '14px',
-                    backgroundColor: message.includes('Error') || message.includes('error') ? '#ffebee' : '#e8f5e9',
-                    color: message.includes('Error') || message.includes('error') ? '#c62828' : '#2e7d32',
-                    border: `1px solid ${message.includes('Error') || message.includes('error') ? '#ef5350' : '#66bb6a'}`,
+                    padding: '6px 12px',
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: loadingPlayers ? 'not-allowed' : 'pointer',
+                    opacity: loadingPlayers ? 0.6 : 1,
+                    fontSize: '12px',
                   }}
                 >
-                  {message}
+                  {loadingPlayers ? '⟳ Memuat...' : '🔄 Refresh'}
+                </button>
+              </div>
+              {loadingPlayers ? (
+                <p>Memuat daftar pemain…</p>
+              ) : players.length === 0 ? (
+                <p style={{ color: '#666' }}>Belum ada pemain terdaftar</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {players.map((player) => (
+                    <button
+                      key={player.id}
+                      onClick={() => handleSelectPlayer(player)}
+                      style={{
+                        padding: '12px',
+                        border: selectedPlayer?.id === player.id ? '2px solid #333' : '1px solid #ddd',
+                        backgroundColor: selectedPlayer?.id === player.id ? '#f0f0f0' : '#fff',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: '#333', marginBottom: 6 }}>{player.username}</div>
+                      <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.5 }}>
+                        <div>📧 {player.email}</div>
+                        <div>💳 {player.account_number} ({player.bank_type})</div>
+                        <div>👤 {player.full_name}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
               )}
+            </div>
 
-              <form onSubmit={(e) => { e.preventDefault(); savePlayerSettings(); }}>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span>Jackpot Aktif</span>
-                    <input
-                      type="checkbox"
-                      checked={playerSettings.jackpotenabled ?? settings.jackpotEnabled}
-                      onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotenabled: e.target.checked }))}
-                    />
-                  </label>
+            {/* PLAYER SETTINGS */}
+            <div className="card">
+              {selectedPlayer ? (
+                <>
+                  <h2 style={{ marginTop: 0 }}>Setting Pemain: {selectedPlayer.username}</h2>
+                  
+                  {message && (
+                    <div
+                      style={{
+                        padding: '12px',
+                        borderRadius: '6px',
+                        marginBottom: '16px',
+                        fontSize: '14px',
+                        backgroundColor: message.includes('Error') || message.includes('error') ? '#ffebee' : '#e8f5e9',
+                        color: message.includes('Error') || message.includes('error') ? '#c62828' : '#2e7d32',
+                        border: `1px solid ${message.includes('Error') || message.includes('error') ? '#ef5350' : '#66bb6a'}`,
+                      }}
+                    >
+                      {message}
+                    </div>
+                  )}
 
-                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span>Izinkan Menang</span>
-                    <input
-                      type="checkbox"
-                      checked={playerSettings.allowwin ?? settings.allowWin}
-                      onChange={(e) => setPlayerSettings(s => ({ ...s, allowwin: e.target.checked }))}
-                    />
-                  </label>
+                  <form onSubmit={(e) => { e.preventDefault(); savePlayerSettings(); }}>
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <span>Jackpot Aktif</span>
+                        <input
+                          type="checkbox"
+                          checked={playerSettings.jackpotenabled ?? settings.jackpotEnabled}
+                          onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotenabled: e.target.checked }))}
+                        />
+                      </label>
 
-                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span>Presentase Jackpot</span>
-                    <input
-                      type="number"
-                      step={0.01}
-                      min={0}
-                      max={1}
-                      value={playerSettings.jackpotpercent ?? settings.jackpotPercent}
-                      onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotpercent: Number(e.target.value) }))}
-                    />
-                    <span style={{ color: '#64748b' }}>(0.0 - 1.0)</span>
-                  </label>
+                      <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <span>Izinkan Menang</span>
+                        <input
+                          type="checkbox"
+                          checked={playerSettings.allowwin ?? settings.allowWin}
+                          onChange={(e) => setPlayerSettings(s => ({ ...s, allowwin: e.target.checked }))}
+                        />
+                      </label>
 
-                  <button className="btn btn-primary" type="submit" disabled={saving}>
-                    {saving ? 'Menyimpan...' : 'Simpan Setting Pemain'}
-                  </button>
-                </div>
-              </form>
-            </>
-          ) : (
-            <p style={{ color: '#666', textAlign: 'center', padding: '20px 0' }}>Pilih pemain dari daftar untuk mengatur setting khusus</p>
-          )}
-        </div>
-      </div>
+                      <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <span>Presentase Jackpot</span>
+                        <input
+                          type="number"
+                          step={0.01}
+                          min={0}
+                          max={1}
+                          value={playerSettings.jackpotpercent ?? settings.jackpotPercent}
+                          onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotpercent: Number(e.target.value) }))}
+                        />
+                        <span style={{ color: '#64748b' }}>(0.0 - 1.0)</span>
+                      </label>
 
-      <div className="card">
-        <p>Catatan: Perubahan di sini akan langsung mempengaruhi halaman User.</p>
-      </div>
+                      <button className="btn btn-primary" type="submit" disabled={saving}>
+                        {saving ? 'Menyimpan...' : 'Simpan Setting Pemain'}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <p style={{ color: '#666' }}>Pilih pemain untuk mengatur setting</p>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <p>Catatan: Perubahan di sini akan langsung mempengaruhi halaman User.</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }
