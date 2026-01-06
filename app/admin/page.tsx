@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 
 type Settings = {
@@ -27,8 +26,10 @@ type PlayerSettings = {
 };
 
 export default function AdminPage() {
-  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminCheckLoading, setAdminCheckLoading] = useState(true);
+  
   const [settings] = useState<Settings>({
     jackpotEnabled: true,
     jackpotPercent: 0.3,
@@ -42,12 +43,18 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Check authentication
+  // Check if admin is logged in
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/auth/login');
+    const userRole = localStorage.getItem('userRole');
+    const admin = localStorage.getItem('admin');
+    
+    if (userRole === 'admin' && admin) {
+      setIsAdminLoggedIn(true);
+    } else {
+      router.push('/auth/admin-login');
     }
-  }, [isAuthenticated, isLoading, router]);
+    setAdminCheckLoading(false);
+  }, [router]);
 
   const loadPlayers = async () => {
     setLoadingPlayers(true);
@@ -77,14 +84,14 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAdminLoggedIn) {
       loadPlayers();
       
       // Auto-refresh setiap 5 detik untuk deteksi user baru
       const interval = setInterval(loadPlayers, 5000);
       return () => clearInterval(interval);
     }
-  }, [isAuthenticated]);
+  }, [isAdminLoggedIn]);
 
   const handleSelectPlayer = async (player: Player) => {
     setSelectedPlayer(player);
@@ -146,13 +153,13 @@ export default function AdminPage() {
 
   return (
     <div className="container">
-      {isLoading ? (
+      {adminCheckLoading ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>
           <p>Loading...</p>
         </div>
-      ) : !isAuthenticated ? (
+      ) : !isAdminLoggedIn ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>
-          <p>Silakan login terlebih dahulu untuk mengakses halaman admin.</p>
+          <p>Silakan login sebagai admin terlebih dahulu.</p>
         </div>
       ) : (
         <>

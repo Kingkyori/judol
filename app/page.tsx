@@ -1,8 +1,19 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getSettings } from '../lib/settings';
 import styles from './home.module.css';
 
 export default async function HomePage() {
+  // Check if user is logged in - if not, redirect to login
+  const cookies = require('next/headers').cookies;
+  const cookieStore = cookies();
+  const userData = cookieStore.get('user')?.value;
+  
+  if (!userData) {
+    // Redirect to home login page (belum login)
+    // Tetapi jangan redirect, biarkan user pilih login user atau admin
+  }
+
   const settings = await getSettings();
   return (
     <div className={styles.container}>

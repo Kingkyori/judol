@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth-context';
 
@@ -22,6 +23,7 @@ type Result = {
 
 export default function UserPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [settings, setSettings] = useState<Settings | null>(null);
   const [playerSettings, setPlayerSettings] = useState<PlayerSettings | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -35,6 +37,14 @@ export default function UserPage() {
   const rafIdsRef = useRef<number[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  const handleLogout = () => {
+    // Clear user data
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    // Redirect to home
+    router.push('/');
+  };
 
   // Get effective settings (player-specific overrides global)
   const effectiveSettings: Settings | null = useMemo(() => {
@@ -188,6 +198,9 @@ export default function UserPage() {
   return (
     <ProtectedRoute>
       <div className="container">
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Selamat datang, {user?.username}!</h2>
+      </div>
       <div className="card">
         <div className="hero-title">Mesin Jackpot</div>
         <div className="hero-subtitle">Coba keberuntungan Anda, lihat dampak dari pengaturan Admin secara langsung.</div>
