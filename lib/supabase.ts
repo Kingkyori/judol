@@ -1,21 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase URL or anon key')
+  console.warn('⚠️ Supabase URL or anon key not configured')
 }
 
 // Client untuk frontend (pakai anon key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
 
-// Server client (pakai service role key jika ada, fallback ke anon key)
-export const supabaseServer = createClient(
-  supabaseUrl,
-  supabaseServiceRoleKey || supabaseAnonKey
-)
+// Server client (sama seperti anon client dengan RLS policy)
+export const supabaseServer = supabase
 
 // Type untuk user
 export interface UserData {
