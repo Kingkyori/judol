@@ -222,8 +222,23 @@ export default function UserPage() {
         </div>
       ) : (
         <>
-          <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>Selamat datang, {user?.username}!</h2>
+            <button 
+              onClick={handleLogout}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#ef4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 600,
+              }}
+            >
+              Logout
+            </button>
           </div>
           <div className="card">
             <div className="hero-title">Mesin Jackpot</div>

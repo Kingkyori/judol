@@ -10,15 +10,15 @@
 .card {
   background: white;
   border-radius: 8px;
-  padding: 2rem;
+  padding: 2.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
+  max-width: 450px;
   width: 100%;
   border: 1px solid #e0e0e0;
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   text-align: center;
   margin-bottom: 2rem;
@@ -38,13 +38,13 @@
 
 .formGroup label {
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   color: #333;
   font-size: 0.95rem;
 }
 
 .formGroup input {
-  padding: 0.75rem;
+  padding: 0.9rem;
   border: 1px solid #d0d0d0;
   border-radius: 4px;
   font-size: 1rem;
@@ -75,7 +75,7 @@
 }
 
 .button {
-  padding: 0.75rem;
+  padding: 0.9rem;
   background: #333;
   color: white;
   border: none;
