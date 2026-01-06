@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase';
 
 export interface PlayerSettings {
   player_id: string;
@@ -12,7 +12,7 @@ export async function GET(req: Request, { params }: { params: { playerId: string
   try {
     const playerId = params.playerId;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('player_settings')
       .select('*')
       .eq('player_id', playerId)
@@ -58,7 +58,7 @@ export async function POST(req: Request, { params }: { params: { playerId: strin
     }
 
     // Upsert
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('player_settings')
       .upsert({ ...settings, updated_at: new Date().toISOString() }, {
         onConflict: 'player_id',

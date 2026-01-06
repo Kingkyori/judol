@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('users')
       .select('id, username, full_name, email, account_number, bank_type, created_at')
       .order('created_at', { ascending: false });

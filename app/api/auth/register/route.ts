@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseServer } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     // Insert ke database
     console.log('📊 Attempting to insert user into Supabase...')
-    const { data: newUser, error } = await supabase
+    const { data: newUser, error } = await supabaseServer
       .from('users')
       .insert([
         {

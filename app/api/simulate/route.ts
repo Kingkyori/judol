@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSettings } from '../../../lib/settings';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     try {
       const body = await req.json().catch(() => ({}));
       if (body.playerId) {
-        const { data } = await supabase
+        const { data } = await supabaseServer
           .from('player_settings')
           .select('*')
           .eq('player_id', body.playerId)

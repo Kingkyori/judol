@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseServer } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Cek user di database
-    const { data: users, error } = await supabase
+    const { data: users, error } = await supabaseServer
       .from('users')
       .select('*')
       .eq('username', username)

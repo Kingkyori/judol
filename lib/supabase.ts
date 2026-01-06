@@ -1,13 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase URL or key')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase URL or anon key')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+// Client untuk frontend (pakai anon key)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Server client (pakai service role key) - gunakan di API routes
+export const supabaseServer = createClient(
+  supabaseUrl,
+  supabaseServiceRoleKey || supabaseAnonKey
+)
 
 // Type untuk user
 export interface UserData {
