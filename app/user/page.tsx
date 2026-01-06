@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import ProtectedRoute from '@/app/components/ProtectedRoute';
 import { useAuth } from '@/lib/auth-context';
 
 type Settings = {
@@ -24,6 +23,9 @@ type Result = {
 export default function UserPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [userCheckLoading, setUserCheckLoading] = useState(true);
+  
   const [settings, setSettings] = useState<Settings | null>(null);
   const [playerSettings, setPlayerSettings] = useState<PlayerSettings | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -45,6 +47,19 @@ export default function UserPage() {
     // Redirect to home
     router.push('/');
   };
+
+  // Check if user is logged in
+  useEffect(() => {
+    const userRole = localStorage.getItem('userRole');
+    const userData = localStorage.getItem('user');
+    
+    if (userRole === 'user' && userData) {
+      setIsUserLoggedIn(true);
+    } else {
+      router.push('/auth/user-login');
+    }
+    setUserCheckLoading(false);
+  }, [router]);
 
   // Get effective settings (player-specific overrides global)
   const effectiveSettings: Settings | null = useMemo(() => {
@@ -196,77 +211,87 @@ export default function UserPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <div className="container">
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Selamat datang, {user?.username}!</h2>
-      </div>
-      <div className="card">
-        <div className="hero-title">Mesin Jackpot</div>
-        <div className="hero-subtitle">Coba keberuntungan Anda, lihat dampak dari pengaturan Admin secara langsung.</div>
-        {!settings || !effectiveSettings ? (
-          <p style={{ marginTop: 12 }}>Memuat pengaturan…</p>
-        ) : (
-          <div className="grid-two" style={{ marginTop: 16 }}>
-            <div style={{ justifySelf: 'center' }}>
-              <div className="slot-wrap">
-                <div className={`slot ${result?.outcome === 'WIN' ? 'win' : result?.outcome === 'LOSE' ? 'lose' : ''}`} role="img" aria-label="Mesin slot 3 reel">
-                  {[0,1,2].map((i) => (
-                    <div className={`reel ${spinning ? 'spinning' : ''}`} key={i}>
-                      <div
-                        className="symbols"
-                        style={{ transform: `translateY(-${reelOffset[i]}px)`, transition: reelTransition[i] }}
-                      >
-                        {Array.from({ length: repeat }).flatMap(() => symbols).map((s, idx) => (
-                          <div className="symbol" key={i+"-"+idx}>{s}</div>
+    <div className="container">
+      {userCheckLoading ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Loading...</p>
+        </div>
+      ) : !isUserLoggedIn ? (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <p>Silakan login sebagai user terlebih dahulu.</p>
+        </div>
+      ) : (
+        <>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <h2 style={{ margin: 0 }}>Selamat datang, {user?.username}!</h2>
+          </div>
+          <div className="card">
+            <div className="hero-title">Mesin Jackpot</div>
+            <div className="hero-subtitle">Coba keberuntungan Anda, lihat dampak dari pengaturan Admin secara langsung.</div>
+            {!settings || !effectiveSettings ? (
+              <p style={{ marginTop: 12 }}>Memuat pengaturan…</p>
+            ) : (
+              <div className="grid-two" style={{ marginTop: 16 }}>
+                <div style={{ justifySelf: 'center' }}>
+                  <div className="slot-wrap">
+                    <div className={`slot ${result?.outcome === 'WIN' ? 'win' : result?.outcome === 'LOSE' ? 'lose' : ''}`} role="img" aria-label="Mesin slot 3 reel">
+                      {[0,1,2].map((i) => (
+                        <div className={`reel ${spinning ? 'spinning' : ''}`} key={i}>
+                          <div
+                            className="symbols"
+                            style={{ transform: `translateY(-${reelOffset[i]}px)`, transition: reelTransition[i] }}
+                          >
+                            {Array.from({ length: repeat }).flatMap(() => symbols).map((s, idx) => (
+                              <div className="symbol" key={i+"-"+idx}>{s}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {showConfetti && (
+                      <div className="confetti" aria-hidden>
+                        {Array.from({ length: 14 }).map((_, i) => (
+                          <span className="confetti-piece" key={i} style={{ left: `${(i*7)%100}%`, background: ["#ef4444","#22c55e","#3b82f6","#f59e0b"][i%4] }} />
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {showConfetti && (
-                  <div className="confetti" aria-hidden>
-                    {Array.from({ length: 14 }).map((_, i) => (
-                      <span className="confetti-piece" key={i} style={{ left: `${(i*7)%100}%`, background: ["#ef4444","#22c55e","#3b82f6","#f59e0b"][i%4] }} />
-                    ))}
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 14, justifyContent: 'center' }}>
-                <button className="btn btn-primary" onClick={play} disabled={spinning}>
-                  {spinning ? 'Memutar…' : 'Spin'}
-                </button>
-                <Link className="btn btn-ghost" href="/">Beranda</Link>
-              </div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 14, justifyContent: 'center' }}>
+                    <button className="btn btn-primary" onClick={play} disabled={spinning}>
+                      {spinning ? 'Memutar…' : 'Spin'}
+                    </button>
+                    <Link className="btn btn-ghost" href="/">Beranda</Link>
+                  </div>
 
-              {result?.outcome && (
-                <div className={`badge ${result.outcome === 'WIN' ? 'win' : result.outcome === 'LOSE' ? 'lose' : 'info'}`} style={{ marginTop: 10, justifySelf: 'center' }}>
-                  {result.outcome === 'WIN' ? 'MENANG' : result.outcome === 'LOSE' ? 'KALAH' : result.outcome === 'DISABLED' ? 'NONAKTIF' : result.outcome}
+                  {result?.outcome && (
+                    <div className={`badge ${result.outcome === 'WIN' ? 'win' : result.outcome === 'LOSE' ? 'lose' : 'info'}`} style={{ marginTop: 10, justifySelf: 'center' }}>
+                      {result.outcome === 'WIN' ? 'MENANG' : result.outcome === 'LOSE' ? 'KALAH' : result.outcome === 'DISABLED' ? 'NONAKTIF' : result.outcome}
+                    </div>
+                  )}
+
+                  {notice && (
+                    <div className="notice" style={{ marginTop: 10 }} aria-live="polite">
+                      {notice}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {notice && (
-                <div className="notice" style={{ marginTop: 10 }} aria-live="polite">
-                  {notice}
+                <div>
+                  <div className="stat-list">
+                    <div className="stat"><span>💡</span><div className="label">Jackpot Aktif</div><div className="value">{effectiveSettings.jackpotEnabled ? 'Ya' : 'Tidak'}</div></div>
+                    <div className="stat"><span>🎯</span><div className="label">Izinkan Menang</div><div className="value">{effectiveSettings.allowWin ? 'Ya' : 'Tidak'}</div></div>
+                    <div className="stat"><span>📈</span><div className="label">Presentase Jackpot</div><div className="value">{effectiveSettings.jackpotPercent}</div></div>
+                  </div>
+                  <div className="card" style={{ marginTop: 12 }}>
+                    <p>Tekan tombol untuk mencoba spin. Hasil akan mengikuti pengaturan dari Admin.</p>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div>
-              <div className="stat-list">
-                <div className="stat"><span>💡</span><div className="label">Jackpot Aktif</div><div className="value">{effectiveSettings.jackpotEnabled ? 'Ya' : 'Tidak'}</div></div>
-                <div className="stat"><span>🎯</span><div className="label">Izinkan Menang</div><div className="value">{effectiveSettings.allowWin ? 'Ya' : 'Tidak'}</div></div>
-                <div className="stat"><span>📈</span><div className="label">Presentase Jackpot</div><div className="value">{effectiveSettings.jackpotPercent}</div></div>
               </div>
-              <div className="card" style={{ marginTop: 12 }}>
-                <p>Tekan tombol untuk mencoba spin. Hasil akan mengikuti pengaturan dari Admin.</p>
-              </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
-    </ProtectedRoute>
   );
 }

@@ -21,7 +21,15 @@ export async function POST(request: NextRequest) {
       .eq('username', username)
       .single()
 
-    if (error || !users) {
+    if (error) {
+      console.error('Supabase query error:', error)
+      return NextResponse.json(
+        { message: 'Username atau password salah' },
+        { status: 401 }
+      )
+    }
+
+    if (!users) {
       return NextResponse.json(
         { message: 'Username atau password salah' },
         { status: 401 }
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Login error:', error)
     return NextResponse.json(
-      { message: 'Terjadi kesalahan server' },
+      { message: 'Terjadi kesalahan server: ' + (error instanceof Error ? error.message : 'Unknown error') },
       { status: 500 }
     )
   }

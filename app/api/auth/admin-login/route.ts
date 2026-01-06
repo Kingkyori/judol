@@ -13,8 +13,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Ambil kredensial dari environment
-    const adminEmail = process.env.ADMIN_EMAIL
-    const adminPassword = process.env.ADMIN_PASSWORD
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@judol.com'
+    const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123'
+
+    // Log untuk debugging (hapus setelah test)
+    console.log('Admin login attempt - Email:', email)
+    console.log('Env ADMIN_EMAIL:', process.env.ADMIN_EMAIL)
 
     // Validasi email dan password
     if (email !== adminEmail || password !== adminPassword) {
