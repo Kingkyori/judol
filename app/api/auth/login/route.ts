@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
     console.log('Login successful for user:', username)
     return NextResponse.json({
       success: true,
+      message: 'Login berhasil',
       user: userWithoutPassword,
     })
   } catch (error) {
