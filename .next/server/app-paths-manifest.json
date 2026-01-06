@@ -1,1 +1,11 @@
-{}
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/auth/login/page": "app/auth/login/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
+  "/user/page": "app/user/page.js",
+  "/page": "app/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/api/players/route": "app/api/players/route.js",
+  "/api/players/[playerId]/route": "app/api/players/[playerId]/route.js",
+  "/api/simulate/route": "app/api/simulate/route.js"
+}

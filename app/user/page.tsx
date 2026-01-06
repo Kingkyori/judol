@@ -1,11 +1,19 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
+import { useAuth } from '@/lib/auth-context';
 
 type Settings = {
   jackpotEnabled: boolean;
-  jackpotPercent: number; // 0.0 - 1.0
+  jackpotPercent: number;
   allowWin: boolean;
+};
+
+type PlayerSettings = {
+  jackpotenabled?: boolean;
+  jackpotpercent?: number;
+  allowwin?: boolean;
 };
 
 type Result = {
@@ -13,12 +21,14 @@ type Result = {
 };
 
 export default function UserPage() {
+  const { user } = useAuth();
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [playerSettings, setPlayerSettings] = useState<PlayerSettings | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [spinning, setSpinning] = useState(false);
   const symbols = useMemo(() => ['7', '♣', '♥', '♦', '★', '🍒', '🔔', '🍋'], []);
   const symbolHeight = 120;
-  const repeat = 10; // repeat symbols to allow long smooth scroll
+  const repeat = 10;
   const totalHeight = symbols.length * repeat * symbolHeight;
   const [reelOffset, setReelOffset] = useState<[number, number, number]>([0, 0, 0]);
   const [reelTransition, setReelTransition] = useState<[string, string, string]>(['none', 'none', 'none']);
@@ -26,16 +36,54 @@ export default function UserPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // Get effective settings (player-specific overrides global)
+  const effectiveSettings: Settings | null = useMemo(() => {
+    if (!settings) return null;
+    
+    // Use player settings if available, otherwise use global
+    return {
+      jackpotEnabled: playerSettings && playerSettings.jackpotenabled !== null && playerSettings.jackpotenabled !== undefined 
+        ? playerSettings.jackpotenabled 
+        : settings.jackpotEnabled,
+      jackpotPercent: playerSettings && playerSettings.jackpotpercent !== null && playerSettings.jackpotpercent !== undefined 
+        ? playerSettings.jackpotpercent 
+        : settings.jackpotPercent,
+      allowWin: playerSettings && playerSettings.allowwin !== null && playerSettings.allowwin !== undefined 
+        ? playerSettings.allowwin 
+        : settings.allowWin,
+    };
+  }, [settings, playerSettings]);
+
   useEffect(() => {
     (async () => {
       try {
+        // Load global settings
         const res = await fetch('/api/settings', { cache: 'no-store' });
         if (res.ok) {
           setSettings(await res.json());
         }
-      } catch {}
+      } catch (e) {
+        console.error('Error loading global settings:', e);
+      }
     })();
   }, []);
+
+  // Load player-specific settings
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    (async () => {
+      try {
+        const res = await fetch(`/api/players/${user.id}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          setPlayerSettings(data);
+        }
+      } catch (e) {
+        console.error('Error loading player settings:', e);
+      }
+    })();
+  }, [user?.id]);
 
   async function play() {
     if (spinning) return;
@@ -75,7 +123,11 @@ export default function UserPage() {
     animateReel(0); animateReel(1); animateReel(2);
 
     try {
-      const res = await fetch('/api/simulate', { method: 'POST' });
+      const res = await fetch('/api/simulate', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: user?.id })
+      });
       const data = res.ok ? await res.json() : null;
       // Decide final reel positions according to outcome
       const n = symbols.length;
@@ -134,11 +186,12 @@ export default function UserPage() {
   }
 
   return (
-    <div className="container">
+    <ProtectedRoute>
+      <div className="container">
       <div className="card">
         <div className="hero-title">Mesin Jackpot</div>
         <div className="hero-subtitle">Coba keberuntungan Anda, lihat dampak dari pengaturan Admin secara langsung.</div>
-        {!settings ? (
+        {!settings || !effectiveSettings ? (
           <p style={{ marginTop: 12 }}>Memuat pengaturan…</p>
         ) : (
           <div className="grid-two" style={{ marginTop: 16 }}>
@@ -189,9 +242,9 @@ export default function UserPage() {
 
             <div>
               <div className="stat-list">
-                <div className="stat"><span>💡</span><div className="label">Jackpot Aktif</div><div className="value">{settings.jackpotEnabled ? 'Ya' : 'Tidak'}</div></div>
-                <div className="stat"><span>🎯</span><div className="label">Izinkan Menang</div><div className="value">{settings.allowWin ? 'Ya' : 'Tidak'}</div></div>
-                <div className="stat"><span>📈</span><div className="label">Presentase Jackpot</div><div className="value">{settings.jackpotPercent}</div></div>
+                <div className="stat"><span>💡</span><div className="label">Jackpot Aktif</div><div className="value">{effectiveSettings.jackpotEnabled ? 'Ya' : 'Tidak'}</div></div>
+                <div className="stat"><span>🎯</span><div className="label">Izinkan Menang</div><div className="value">{effectiveSettings.allowWin ? 'Ya' : 'Tidak'}</div></div>
+                <div className="stat"><span>📈</span><div className="label">Presentase Jackpot</div><div className="value">{effectiveSettings.jackpotPercent}</div></div>
               </div>
               <div className="card" style={{ marginTop: 12 }}>
                 <p>Tekan tombol untuk mencoba spin. Hasil akan mengikuti pengaturan dari Admin.</p>
@@ -201,5 +254,6 @@ export default function UserPage() {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

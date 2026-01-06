@@ -1,188 +1,223 @@
 "use client";
-import { useEffect, useState, useRef } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 type Settings = {
   jackpotEnabled: boolean;
-  jackpotPercent: number; // 0.0 - 1.0
-  allowWin: boolean; // when false, user cannot win
+  jackpotPercent: number;
+  allowWin: boolean;
+};
+
+type Player = {
+  id: string;
+  username: string;
+  full_name: string;
+  email: string;
+  account_number: string;
+  bank_type: string;
+  created_at: string;
+};
+
+type PlayerSettings = {
+  player_id?: string;
+  jackpotenabled?: boolean;
+  jackpotpercent?: number;
+  allowwin?: boolean;
 };
 
 export default function AdminPage() {
-  const [settings, setSettings] = useState<Settings>({
+  const [settings] = useState<Settings>({
     jackpotEnabled: true,
     jackpotPercent: 0.3,
     allowWin: true,
   });
-  const [loading, setLoading] = useState(true);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [playerSettings, setPlayerSettings] = useState<PlayerSettings>({});
+  
+  const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [source, setSource] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
-      setLoading(true);
+      setLoadingPlayers(true);
       try {
-        const res = await fetch('/api/settings', { cache: 'no-store' });
+        const res = await fetch('/api/players', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
-          setSettings(data);
-          setSource(res.headers.get('X-Settings-Source'));
+          setPlayers(data);
         }
-      } catch {}
-      setLoading(false);
+      } catch (e) {
+        console.error('Error loading players:', e);
+      }
+      setLoadingPlayers(false);
     })();
   }, []);
 
-  async function save() {
+  const handleSelectPlayer = async (player: Player) => {
+    setSelectedPlayer(player);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/players/${player.id}`, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setPlayerSettings(data);
+      } else {
+        // Jika 404 atau error, reset ke default
+        setPlayerSettings({});
+      }
+    } catch (e) {
+      console.error('Error loading player settings:', e);
+      setPlayerSettings({});
+    }
+  };
+
+  async function savePlayerSettings() {
+    if (!selectedPlayer) return;
+    
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/settings', {
+      console.log('Saving player settings:', { playerId: selectedPlayer.id, settings: playerSettings });
+      
+      const res = await fetch(`/api/players/${selectedPlayer.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(playerSettings),
       });
+      
+      console.log('API response status:', res.status);
+      const responseData = await res.json();
+      console.log('API response data:', responseData);
+      
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Gagal menyimpan (${res.status})`);
+        throw new Error(responseData.error || `Gagal menyimpan (${res.status})`);
       }
-      setMessage('Tersimpan!');
-      // Re-fetch to ensure UI reflects the latest persisted settings
+      setMessage(`✅ Setting pemain ${selectedPlayer.username} tersimpan!`);
+      
+      // Reload player settings untuk verify
       try {
-        const r2 = await fetch('/api/settings', { cache: 'no-store' });
+        const r2 = await fetch(`/api/players/${selectedPlayer.id}`, { cache: 'no-store' });
         if (r2.ok) {
-          setSettings(await r2.json());
-          setSource(r2.headers.get('X-Settings-Source'));
+          const reloadedSettings = await r2.json();
+          console.log('Reloaded settings:', reloadedSettings);
+          setPlayerSettings(reloadedSettings);
         }
       } catch {}
     } catch (e: any) {
-      console.error('Save error:', e);
-      setMessage(e.message || 'Error saat menyimpan');
+      console.error('Save player settings error:', e);
+      setMessage(`❌ Error: ${e.message || 'Error saat menyimpan setting pemain'}`);
     } finally {
       setSaving(false);
     }
   }
 
-  function exportSettings() {
-    const dataStr = JSON.stringify(settings, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `judol-settings-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setMessage('Download berhasil!');
-  }
-
-  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const content = event.target?.result as string;
-        const imported = JSON.parse(content) as Settings;
-        
-        // Validasi
-        if (typeof imported.jackpotEnabled !== 'boolean' ||
-            typeof imported.jackpotPercent !== 'number' ||
-            typeof imported.allowWin !== 'boolean') {
-          throw new Error('Format file tidak valid');
-        }
-
-        setSettings(imported);
-        setMessage('File berhasil dimuat. Klik "Simpan" untuk menyimpan.');
-      } catch (err: any) {
-        setMessage(`Error import: ${err.message}`);
-      }
-    };
-    reader.readAsText(file);
-    
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }
-
   return (
     <div className="container">
-      <div className="card">
-        <h2>Pengaturan Admin</h2>
-        {loading ? (
-          <p>Memuat pengaturan…</p>
-        ) : (
-          <form onSubmit={(e) => { e.preventDefault(); save(); }}>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span>Jackpot Aktif</span>
-                <input
-                  type="checkbox"
-                  checked={settings.jackpotEnabled}
-                  onChange={(e) => setSettings(s => ({ ...s, jackpotEnabled: e.target.checked }))}
-                />
-              </label>
-
-              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span>Izinkan Menang</span>
-                <input
-                  type="checkbox"
-                  checked={settings.allowWin}
-                  onChange={(e) => setSettings(s => ({ ...s, allowWin: e.target.checked }))}
-                />
-              </label>
-
-              <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span>Presentase Jackpot</span>
-                <input
-                  type="number"
-                  step={0.01}
-                  min={0}
-                  max={1}
-                  value={settings.jackpotPercent}
-                  onChange={(e) => setSettings(s => ({ ...s, jackpotPercent: Number(e.target.value) }))}
-                />
-                <span style={{ color: '#64748b' }}>(0.0 - 1.0)</span>
-              </label>
-
-              <button className="btn btn-primary" type="submit" disabled={saving}>Simpan</button>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <button 
-                  type="button" 
-                  className="btn" 
-                  style={{ backgroundColor: '#666', color: 'white', cursor: 'pointer' }}
-                  onClick={exportSettings}
+      {/* PLAYERS SECTION */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
+        {/* PLAYERS LIST */}
+        <div className="card">
+          <h2 style={{ marginTop: 0 }}>Daftar Pemain</h2>
+          {loadingPlayers ? (
+            <p>Memuat daftar pemain…</p>
+          ) : players.length === 0 ? (
+            <p style={{ color: '#666' }}>Belum ada pemain terdaftar</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {players.map((player) => (
+                <button
+                  key={player.id}
+                  onClick={() => handleSelectPlayer(player)}
+                  style={{
+                    padding: '12px',
+                    border: selectedPlayer?.id === player.id ? '2px solid #333' : '1px solid #ddd',
+                    backgroundColor: selectedPlayer?.id === player.id ? '#f0f0f0' : '#fff',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
                 >
-                  📥 Download Backup
+                  <div style={{ fontWeight: 600, color: '#333', marginBottom: 6 }}>{player.username}</div>
+                  <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.5 }}>
+                    <div>📧 {player.email}</div>
+                    <div>💳 {player.account_number} ({player.bank_type})</div>
+                    <div>👤 {player.full_name}</div>
+                  </div>
                 </button>
-                <button 
-                  type="button" 
-                  className="btn" 
-                  style={{ backgroundColor: '#666', color: 'white', cursor: 'pointer' }}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  📤 Upload Backup
-                </button>
-              </div>
-              <input 
-                ref={fileInputRef}
-                type="file" 
-                accept=".json" 
-                onChange={handleImport}
-                style={{ display: 'none' }}
-              />
+              ))}
             </div>
-            {source && (
-              <p style={{ marginTop: 8, color: '#64748b' }}>Sumber pengaturan: {source}</p>
-            )}
-            {message && <p style={{ marginTop: 10 }}>{message}</p>}
-          </form>
-        )}
+          )}
+        </div>
+
+        {/* PLAYER SETTINGS */}
+        <div className="card">
+          {selectedPlayer ? (
+            <>
+              <h2 style={{ marginTop: 0 }}>Setting Pemain: {selectedPlayer.username}</h2>
+              
+              {message && (
+                <div
+                  style={{
+                    padding: '12px',
+                    borderRadius: '6px',
+                    marginBottom: '16px',
+                    fontSize: '14px',
+                    backgroundColor: message.includes('Error') || message.includes('error') ? '#ffebee' : '#e8f5e9',
+                    color: message.includes('Error') || message.includes('error') ? '#c62828' : '#2e7d32',
+                    border: `1px solid ${message.includes('Error') || message.includes('error') ? '#ef5350' : '#66bb6a'}`,
+                  }}
+                >
+                  {message}
+                </div>
+              )}
+
+              <form onSubmit={(e) => { e.preventDefault(); savePlayerSettings(); }}>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span>Jackpot Aktif</span>
+                    <input
+                      type="checkbox"
+                      checked={playerSettings.jackpotenabled ?? settings.jackpotEnabled}
+                      onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotenabled: e.target.checked }))}
+                    />
+                  </label>
+
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span>Izinkan Menang</span>
+                    <input
+                      type="checkbox"
+                      checked={playerSettings.allowwin ?? settings.allowWin}
+                      onChange={(e) => setPlayerSettings(s => ({ ...s, allowwin: e.target.checked }))}
+                    />
+                  </label>
+
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span>Presentase Jackpot</span>
+                    <input
+                      type="number"
+                      step={0.01}
+                      min={0}
+                      max={1}
+                      value={playerSettings.jackpotpercent ?? settings.jackpotPercent}
+                      onChange={(e) => setPlayerSettings(s => ({ ...s, jackpotpercent: Number(e.target.value) }))}
+                    />
+                    <span style={{ color: '#64748b' }}>(0.0 - 1.0)</span>
+                  </label>
+
+                  <button className="btn btn-primary" type="submit" disabled={saving}>
+                    {saving ? 'Menyimpan...' : 'Simpan Setting Pemain'}
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <p style={{ color: '#666', textAlign: 'center', padding: '20px 0' }}>Pilih pemain dari daftar untuk mengatur setting khusus</p>
+          )}
+        </div>
       </div>
+
       <div className="card">
         <p>Catatan: Perubahan di sini akan langsung mempengaruhi halaman User.</p>
       </div>
